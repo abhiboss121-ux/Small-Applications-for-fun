@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -61,6 +61,7 @@ export default function App() {
   const [postContent, setPostContent] = useState('');
   const [redditUrl, setRedditUrl] = useState('');
   const [fetchedContent, setFetchedContent] = useState('');
+  const [isFetchingLink, setIsFetchingLink] = useState(false);
   const [inputType, setInputType] = useState<'text' | 'link'>('text');
   const [length, setLength] = useState<CommentLength>('Medium');
   const [tone, setTone] = useState<CommentTone>('Witty');
@@ -131,9 +132,11 @@ export default function App() {
 
       let response;
       if (inputType === 'link') {
-        // First fetch content to show it
-        const content = await fetchPostContent(redditUrl);
-        setFetchedContent(content);
+        // Only fetch if not already fetched by the automatic preview
+        if (!fetchedContent) {
+          const content = await fetchPostContent(redditUrl);
+          setFetchedContent(content);
+        }
 
         response = await ai.models.generateContent({
           model: "gemini-3-flash-preview",
@@ -221,6 +224,21 @@ export default function App() {
     link.download = 'reddit-magnet-image.png';
     link.click();
   };
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (inputType === 'link' && redditUrl.trim() && redditUrl.includes('reddit.com')) {
+        setIsFetchingLink(true);
+        const content = await fetchPostContent(redditUrl);
+        setFetchedContent(content);
+        setIsFetchingLink(false);
+      } else if (inputType === 'link' && !redditUrl.trim()) {
+        setFetchedContent('');
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [redditUrl, inputType]);
 
   const copyToClipboard = () => {
     if (!generatedComment) return;
@@ -356,12 +374,45 @@ export default function App() {
                       placeholder="https://www.reddit.com/r/..."
                       className="input-field text-[16px] py-5"
                     />
-                    <div className="mt-4 flex items-center gap-2 px-1">
-                      <div className="w-1 h-1 rounded-full bg-zinc-700" />
-                      <p className="text-[12px] text-zinc-600 font-medium">
-                        AI will automatically extract and analyze the post content.
-                      </p>
-                    </div>
+                    
+                    <AnimatePresence>
+                      {isFetchingLink && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="mt-4 flex items-center gap-3 px-1"
+                        >
+                          <RefreshCcw className="w-4 h-4 text-[#FF4500] animate-spin" />
+                          <p className="text-[12px] text-zinc-500 font-bold uppercase tracking-widest">Fetching post details...</p>
+                        </motion.div>
+                      )}
+
+                      {!isFetchingLink && fetchedContent && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-6 space-y-3"
+                        >
+                          <div className="flex items-center gap-2 px-1">
+                            <FileText className="w-3.5 h-3.5 text-[#FF4500]" />
+                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preview</span>
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 text-sm text-zinc-400 italic leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">
+                            <Markdown>{fetchedContent}</Markdown>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {!isFetchingLink && !fetchedContent && (
+                      <div className="mt-4 flex items-center gap-2 px-1">
+                        <div className="w-1 h-1 rounded-full bg-zinc-700" />
+                        <p className="text-[12px] text-zinc-600 font-medium">
+                          AI will automatically extract and analyze the post content.
+                        </p>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -412,7 +463,9 @@ export default function App() {
               </div>
 
               <div className="flex items-end">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => generateComment()}
                   disabled={isGenerating}
                   className="primary-button h-[60px] text-lg"
@@ -428,7 +481,7 @@ export default function App() {
                       Generate
                     </>
                   )}
-                </button>
+                </motion.button>
               </div>
             </div>
 
@@ -436,6 +489,7 @@ export default function App() {
             <AnimatePresence>
               {error && (
                 <motion.div
+                  key="error-message"
                   initial={{ opacity: 0, y: -10, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -451,6 +505,7 @@ export default function App() {
             <AnimatePresence>
               {(generatedComment || fetchedContent) && (
                 <motion.div
+                  key="output-area"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-8 pt-12 border-t border-white/5"
@@ -488,7 +543,9 @@ export default function App() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={copyToClipboard}
                             className="secondary-button"
                           >
@@ -503,14 +560,15 @@ export default function App() {
                                 Copy
                               </>
                             )}
-                          </button>
+                          </motion.button>
                         </div>
                       </div>
                       
                       <motion.div 
-                        initial={{ scale: 0.98 }}
-                        animate={{ scale: 1 }}
-                        className="bg-black/60 border border-white/5 rounded-[32px] p-8 md:p-10 relative group overflow-hidden shadow-inner"
+                        initial={{ scale: 0.98, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="bg-black/60 border border-white/5 rounded-[32px] p-8 md:p-10 relative group overflow-hidden shadow-inner animate-border-glow"
                       >
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-[#FF4500]/40" />
                         <div className="markdown-body">
@@ -522,6 +580,7 @@ export default function App() {
                       <AnimatePresence>
                         {showImagePrompt && !generatedImage && !isGeneratingImage && (
                           <motion.div
+                            key="image-prompt"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-[#FF4500]/5 border border-[#FF4500]/10 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6"
@@ -535,18 +594,21 @@ export default function App() {
                                 <p className="text-xs text-zinc-500 mt-1">Would you like to generate a matching image for this comment?</p>
                               </div>
                             </div>
-                            <button
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={generateImage}
                               className="primary-button md:w-auto py-2.5 px-6 text-sm"
                             >
                               <Sparkles className="w-4 h-4" />
                               Generate Image
-                            </button>
+                            </motion.button>
                           </motion.div>
                         )}
 
                         {isGeneratingImage && (
                           <motion.div
+                            key="generating-image"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="bg-zinc-900/50 border border-white/5 rounded-[32px] p-12 flex flex-col items-center justify-center gap-4"
@@ -558,6 +620,7 @@ export default function App() {
 
                         {generatedImage && (
                           <motion.div
+                            key="generated-image"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             className="space-y-4"
@@ -587,30 +650,36 @@ export default function App() {
                         <div className="flex flex-col items-center gap-6">
                           <p className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.3em]">What would you like to regenerate?</p>
                           <div className="flex flex-wrap justify-center gap-3">
-                            <button
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleRegenerate('comment')}
                               className="secondary-button"
                               disabled={isGenerating}
                             >
                               <RotateCcw className="w-4 h-4" />
                               Comment Only
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleRegenerate('image')}
                               className="secondary-button"
                               disabled={isGeneratingImage || !generatedComment}
                             >
                               <RotateCcw className="w-4 h-4" />
                               Image Only
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleRegenerate('both')}
                               className="secondary-button"
                               disabled={isGenerating || isGeneratingImage}
                             >
                               <RotateCcw className="w-4 h-4" />
                               Both
-                            </button>
+                            </motion.button>
                           </div>
                         </div>
                       </div>

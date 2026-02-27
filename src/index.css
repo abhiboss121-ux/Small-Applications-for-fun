@@ -31,11 +31,28 @@ body {
 }
 
 .primary-button {
-  @apply w-full bg-[#FF4500] hover:bg-[#FF5414] text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_8px_24px_-8px_rgba(255,69,0,0.5)] hover:shadow-[0_12px_32px_-8px_rgba(255,69,0,0.6)];
+  @apply w-full bg-[#FF4500] hover:bg-[#FF5414] text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_8px_24px_-8px_rgba(255,69,0,0.5)] hover:shadow-[0_12px_32px_-8px_rgba(255,69,0,0.6)] relative overflow-hidden;
+}
+
+.primary-button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .secondary-button {
-  @apply px-5 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all duration-300 text-sm font-semibold flex items-center gap-2;
+  @apply px-5 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all duration-300 text-sm font-semibold flex items-center gap-2 active:scale-95;
 }
 
 .tab-button {
@@ -71,6 +88,23 @@ body {
 
 .animate-pulse-soft {
   animation: pulse-soft 3s ease-in-out infinite;
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(255, 69, 0, 0.1); box-shadow: 0 0 20px rgba(255, 69, 0, 0.05); }
+  50% { border-color: rgba(255, 69, 0, 0.3); box-shadow: 0 0 40px rgba(255, 69, 0, 0.15); }
+}
+
+.animate-border-glow {
+  animation: border-glow 4s ease-in-out infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-white/5 hover:bg-white/10;
 }
 
 /* Custom Scrollbar */
