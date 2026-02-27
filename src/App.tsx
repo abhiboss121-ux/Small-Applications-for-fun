@@ -171,19 +171,22 @@ export default function App() {
 
       let response;
       if (inputType === 'link') {
-        // Only fetch if not already fetched by the automatic preview
-        if (!fetchedContent) {
-          const content = await fetchPostContent(redditUrl);
-          setFetchedContent(content);
+        // If we already have fetched content, use it directly to be more robust
+        if (fetchedContent) {
+          response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: `${basePrompt}\n\nAnalyze this Reddit post content and write a comment:\n\n${fetchedContent}`,
+          });
+        } else {
+          // Fallback to urlContext if content wasn't pre-fetched
+          response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: `${basePrompt}\n\nAnalyze the Reddit post at this URL: ${redditUrl}`,
+            config: {
+              tools: [{ urlContext: {} }]
+            }
+          });
         }
-
-        response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: `${basePrompt}\n\nAnalyze the Reddit post at this URL: ${redditUrl}`,
-          config: {
-            tools: [{ urlContext: {} }]
-          }
-        });
       } else {
         response = await ai.models.generateContent({
           model: "gemini-3-flash-preview",
@@ -198,11 +201,12 @@ export default function App() {
         setEngagementScore(Math.floor(Math.random() * 15) + 85); // Random high score for interactivity
         setShowImagePrompt(true);
       } else {
-        throw new Error('No response from AI');
+        throw new Error('Empty response from AI');
       }
-    } catch (err) {
-      console.error(err);
-      setError('Failed to generate comment. Please try again.');
+    } catch (err: any) {
+      console.error("Generation Error:", err);
+      const errorMessage = err.message || 'Unknown error';
+      setError(`Failed to generate comment: ${errorMessage}. Please try again.`);
     } finally {
       setIsGenerating(false);
     }
