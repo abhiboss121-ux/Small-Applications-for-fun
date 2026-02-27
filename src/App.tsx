@@ -89,7 +89,6 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [engagementScore, setEngagementScore] = useState<number | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('magnet_history');
@@ -198,15 +197,20 @@ export default function App() {
       if (text) {
         setGeneratedComment(text);
         saveToHistory(text);
-        setEngagementScore(Math.floor(Math.random() * 15) + 85); // Random high score for interactivity
         setShowImagePrompt(true);
       } else {
         throw new Error('Empty response from AI');
       }
     } catch (err: any) {
       console.error("Generation Error:", err);
-      const errorMessage = err.message || 'Unknown error';
-      setError(`Failed to generate comment: ${errorMessage}. Please try again.`);
+      let errorMessage = err.message || 'Unknown error';
+      
+      // Handle rate limit errors specifically
+      if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        errorMessage = "The AI is currently busy (Rate Limit reached). Please wait about 60 seconds and try again.";
+      }
+      
+      setError(`Failed to generate comment: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
     }
@@ -271,18 +275,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (inputType === 'link' && redditUrl.trim() && redditUrl.includes('reddit.com')) {
-        setIsFetchingLink(true);
-        const content = await fetchPostContent(redditUrl);
-        setFetchedContent(content);
-        setIsFetchingLink(false);
-      } else if (inputType === 'link' && !redditUrl.trim()) {
-        setFetchedContent('');
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    // Automatic fetching removed for speed and simplicity
   }, [redditUrl, inputType]);
 
   const copyToClipboard = () => {
@@ -442,44 +435,12 @@ export default function App() {
                       className="input-field text-[16px] py-5"
                     />
                     
-                    <AnimatePresence>
-                      {isFetchingLink && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          className="mt-4 flex items-center gap-3 px-1"
-                        >
-                          <RefreshCcw className="w-4 h-4 text-[#FF4500] animate-spin" />
-                          <p className="text-[12px] text-zinc-500 font-bold uppercase tracking-widest">Fetching post details...</p>
-                        </motion.div>
-                      )}
-
-                      {!isFetchingLink && fetchedContent && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mt-6 space-y-3"
-                        >
-                          <div className="flex items-center gap-2 px-1">
-                            <FileText className="w-3.5 h-3.5 text-[#FF4500]" />
-                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preview</span>
-                          </div>
-                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 text-sm text-zinc-400 italic leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">
-                            <Markdown>{fetchedContent}</Markdown>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {!isFetchingLink && !fetchedContent && (
-                      <div className="mt-4 flex items-center gap-2 px-1">
-                        <div className="w-1 h-1 rounded-full bg-zinc-700" />
-                        <p className="text-[12px] text-zinc-600 font-medium">
-                          AI will automatically extract and analyze the post content.
-                        </p>
-                      </div>
-                    )}
+                    <div className="mt-4 flex items-center gap-2 px-1">
+                      <div className="w-1 h-1 rounded-full bg-zinc-700" />
+                      <p className="text-[12px] text-zinc-600 font-medium">
+                        AI will analyze the post content directly when you click Generate.
+                      </p>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -570,97 +531,49 @@ export default function App() {
 
             {/* Output Area */}
             <AnimatePresence>
-              {(generatedComment || fetchedContent) && (
+              {generatedComment && (
                 <motion.div
                   key="output-area"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-8 pt-12 border-t border-white/5"
                 >
-                  {/* Fetched Content Display */}
-                  {inputType === 'link' && fetchedContent && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 px-1">
-                        <div className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center border border-white/5">
-                          <FileText className="w-4 h-4 text-zinc-400" />
+                  {/* Generated Comment */}
+                  <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-[#FF4500]/10 flex items-center justify-center border border-[#FF4500]/20">
+                          <Sparkles className="w-5 h-5 text-[#FF4500]" />
                         </div>
-                        <label className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-400">
-                          Post Content Analysis
-                        </label>
+                        <div>
+                          <label className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-400 block">
+                            Generated Magnet
+                          </label>
+                          <span className="text-[10px] text-zinc-600 font-bold uppercase">Ready to Post</span>
+                        </div>
                       </div>
-                      <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 text-sm text-zinc-400 italic leading-relaxed">
-                        <Markdown>{fetchedContent}</Markdown>
+
+                      <div className="flex items-center gap-3">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={copyToClipboard}
+                          className="secondary-button"
+                        >
+                          {copied ? (
+                            <>
+                              <Check className="w-4 h-4 text-green-500" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" />
+                              Copy
+                            </>
+                          )}
+                        </motion.button>
                       </div>
                     </div>
-                  )}
-
-                  {/* Generated Comment */}
-                  {generatedComment && (
-                    <div className="space-y-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-2xl bg-[#FF4500]/10 flex items-center justify-center border border-[#FF4500]/20">
-                            <Sparkles className="w-5 h-5 text-[#FF4500]" />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-400 block">
-                              Generated Magnet
-                            </label>
-                            <span className="text-[10px] text-zinc-600 font-bold uppercase">Ready to Post</span>
-                          </div>
-                        </div>
-                        
-                        {engagementScore && (
-                          <motion.div 
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-4 py-2"
-                          >
-                            <div className="flex flex-col items-end">
-                              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Engagement Potential</span>
-                              <div className="flex items-center gap-1.5">
-                                <TrendingUp className="w-3 h-3 text-emerald-500" />
-                                <span className="text-sm font-black text-white">{engagementScore}%</span>
-                              </div>
-                            </div>
-                            <div className="w-10 h-10 rounded-full border-2 border-zinc-800 flex items-center justify-center relative">
-                              <svg className="w-full h-full -rotate-90">
-                                <circle
-                                  cx="20" cy="20" r="16"
-                                  fill="transparent"
-                                  stroke="currentColor"
-                                  strokeWidth="3"
-                                  className="text-[#FF4500]"
-                                  strokeDasharray={100}
-                                  strokeDashoffset={100 - engagementScore}
-                                />
-                              </svg>
-                              <Zap className="w-3 h-3 text-[#FF4500] absolute" />
-                            </div>
-                          </motion.div>
-                        )}
-
-                        <div className="flex items-center gap-3">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={copyToClipboard}
-                            className="secondary-button"
-                          >
-                            {copied ? (
-                              <>
-                                <Check className="w-4 h-4 text-green-500" />
-                                Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-4 h-4" />
-                                Copy
-                              </>
-                            )}
-                          </motion.button>
-                        </div>
-                      </div>
                       
                       <motion.div 
                         initial={{ scale: 0.98, opacity: 0 }}
@@ -782,23 +695,25 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                  )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                  <div className="flex justify-center gap-4 pt-2">
-                    <button className="text-[11px] font-bold text-zinc-600 hover:text-[#FF4500] flex items-center gap-2 transition-all uppercase tracking-widest">
-                      <History className="w-3.5 h-3.5" />
-                      History
-                    </button>
-                    <button className="text-[11px] font-bold text-zinc-600 hover:text-[#FF4500] flex items-center gap-2 transition-all uppercase tracking-widest">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Reddit Guidelines
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+              <div className="flex justify-center gap-4 pt-2">
+                <button 
+                  onClick={() => setShowHistory(true)}
+                  className="text-[11px] font-bold text-zinc-600 hover:text-[#FF4500] flex items-center gap-2 transition-all uppercase tracking-widest"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  History
+                </button>
+                <button className="text-[11px] font-bold text-zinc-600 hover:text-[#FF4500] flex items-center gap-2 transition-all uppercase tracking-widest">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Reddit Guidelines
+                </button>
+              </div>
+            </div>
+          </motion.div>
 
         {/* History Modal */}
         <AnimatePresence>
