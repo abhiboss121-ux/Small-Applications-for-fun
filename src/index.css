@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -7,45 +7,75 @@
 }
 
 body {
-  @apply bg-[#030303] text-zinc-100 antialiased selection:bg-[#FF4500]/30 selection:text-white;
+  @apply bg-[#030303] text-zinc-100 antialiased selection:bg-[#FF4500]/30 selection:text-white overflow-x-hidden;
 }
 
-.reddit-gradient {
-  background: radial-gradient(circle at top right, rgba(255, 69, 0, 0.15), transparent 40%),
-              radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.1), transparent 40%);
+/* Atmospheric Background */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: 
+    radial-gradient(circle at 80% 20%, rgba(255, 69, 0, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(255, 69, 0, 0.02) 0%, transparent 100%);
+  filter: blur(80px);
 }
 
 .glass-panel {
-  @apply bg-[#1A1A1B]/80 border border-[#343536] backdrop-blur-xl shadow-2xl;
+  @apply bg-[#121213]/60 border border-white/5 backdrop-blur-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)];
 }
 
 .input-field {
-  @apply w-full bg-[#1A1A1B] border border-[#343536] rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#FF4500]/50 focus:border-[#FF4500]/50 transition-all placeholder:text-zinc-500;
+  @apply w-full bg-[#0A0A0B] border border-white/5 rounded-2xl px-5 py-4 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#FF4500]/40 focus:border-[#FF4500]/40 transition-all duration-300 placeholder:text-zinc-600 shadow-inner;
 }
 
 .primary-button {
-  @apply w-full bg-[#FF4500] hover:bg-[#FF5414] text-white font-bold py-3 px-6 rounded-full transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-[#FF4500]/20;
+  @apply w-full bg-[#FF4500] hover:bg-[#FF5414] text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_8px_24px_-8px_rgba(255,69,0,0.5)] hover:shadow-[0_12px_32px_-8px_rgba(255,69,0,0.6)];
 }
 
 .secondary-button {
-  @apply px-4 py-2 rounded-full border border-[#343536] hover:bg-[#272729] text-zinc-400 hover:text-white transition-all text-sm font-medium flex items-center gap-2;
+  @apply px-5 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all duration-300 text-sm font-semibold flex items-center gap-2;
+}
+
+.tab-button {
+  @apply px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 relative overflow-hidden;
 }
 
 .markdown-body {
-  @apply text-zinc-200 leading-relaxed text-[15px];
+  @apply text-zinc-300 leading-relaxed text-[16px] font-normal;
 }
 
 .markdown-body p {
-  @apply mb-4 last:mb-0;
+  @apply mb-5 last:mb-0;
 }
 
 .markdown-body blockquote {
-  @apply border-l-4 border-[#343536] pl-4 italic text-zinc-400 my-4;
+  @apply border-l-4 border-[#FF4500]/30 pl-5 italic text-zinc-500 my-6 bg-white/[0.02] py-2 pr-4 rounded-r-lg;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -53,5 +83,5 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-[#343536] rounded-full hover:bg-[#444546];
+  @apply bg-white/10 rounded-full border-2 border-transparent bg-clip-padding hover:bg-white/20 transition-colors;
 }
