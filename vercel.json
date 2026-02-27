@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/(api|auth)/:path*",
+      "destination": "/server.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
