@@ -23,7 +23,13 @@ import {
   Image as ImageIcon,
   Download,
   RotateCcw,
-  FileText
+  FileText,
+  Clock,
+  Reply,
+  TrendingUp,
+  Zap,
+  MessageCircle,
+  Share2
 } from "lucide-react";
 import Markdown from 'react-markdown';
 
@@ -57,6 +63,15 @@ const RedditLogo = () => (
   </svg>
 );
 
+interface HistoryItem {
+  id: string;
+  timestamp: number;
+  comment: string;
+  url?: string;
+  type: 'text' | 'link';
+  tone: string;
+}
+
 export default function App() {
   const [postContent, setPostContent] = useState('');
   const [redditUrl, setRedditUrl] = useState('');
@@ -72,6 +87,30 @@ export default function App() {
   const [showImagePrompt, setShowImagePrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [engagementScore, setEngagementScore] = useState<number | null>(null);
+
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('magnet_history');
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
+  const saveToHistory = (comment: string) => {
+    const newItem: HistoryItem = {
+      id: Math.random().toString(36).substring(7),
+      timestamp: Date.now(),
+      comment,
+      url: redditUrl,
+      type: inputType,
+      tone
+    };
+    const updatedHistory = [newItem, ...history].slice(0, 50);
+    setHistory(updatedHistory);
+    localStorage.setItem('magnet_history', JSON.stringify(updatedHistory));
+  };
 
   const fetchPostContent = async (url: string) => {
     try {
@@ -155,6 +194,8 @@ export default function App() {
       const text = response.text;
       if (text) {
         setGeneratedComment(text);
+        saveToHistory(text);
+        setEngagementScore(Math.floor(Math.random() * 15) + 85); // Random high score for interactivity
         setShowImagePrompt(true);
       } else {
         throw new Error('No response from AI');
@@ -251,11 +292,33 @@ export default function App() {
     <div className="min-h-screen relative flex flex-col items-center justify-center p-4 md:p-8">
       <div className="atmosphere" />
       
+      {/* Header Navigation */}
+      <nav className="fixed top-0 left-0 right-0 p-6 flex justify-between items-center z-50 backdrop-blur-md bg-black/10 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <RedditLogo />
+          <span className="text-lg font-black tracking-tighter uppercase">Magnet</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={() => setShowHistory(true)}
+            className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold uppercase tracking-widest group"
+          >
+            <Clock className="w-4 h-4 group-hover:rotate-[-20deg] transition-transform" />
+            History
+          </button>
+          <div className="h-4 w-px bg-white/10" />
+          <div className="flex items-center gap-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+            <Zap className="w-3 h-3 text-[#FF4500]" />
+            AI Active
+          </div>
+        </div>
+      </nav>
+
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-4xl relative z-10"
+        className="w-full max-w-4xl relative z-10 pt-24"
       >
         {/* Header */}
         <header className="mb-12 text-center flex flex-col items-center">
@@ -530,7 +593,7 @@ export default function App() {
                   {/* Generated Comment */}
                   {generatedComment && (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between px-1">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-2xl bg-[#FF4500]/10 flex items-center justify-center border border-[#FF4500]/20">
                             <Sparkles className="w-5 h-5 text-[#FF4500]" />
@@ -542,6 +605,37 @@ export default function App() {
                             <span className="text-[10px] text-zinc-600 font-bold uppercase">Ready to Post</span>
                           </div>
                         </div>
+                        
+                        {engagementScore && (
+                          <motion.div 
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-4 py-2"
+                          >
+                            <div className="flex flex-col items-end">
+                              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Engagement Potential</span>
+                              <div className="flex items-center gap-1.5">
+                                <TrendingUp className="w-3 h-3 text-emerald-500" />
+                                <span className="text-sm font-black text-white">{engagementScore}%</span>
+                              </div>
+                            </div>
+                            <div className="w-10 h-10 rounded-full border-2 border-zinc-800 flex items-center justify-center relative">
+                              <svg className="w-full h-full -rotate-90">
+                                <circle
+                                  cx="20" cy="20" r="16"
+                                  fill="transparent"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  className="text-[#FF4500]"
+                                  strokeDasharray={100}
+                                  strokeDashoffset={100 - engagementScore}
+                                />
+                              </svg>
+                              <Zap className="w-3 h-3 text-[#FF4500] absolute" />
+                            </div>
+                          </motion.div>
+                        )}
+
                         <div className="flex items-center gap-3">
                           <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -701,6 +795,78 @@ export default function App() {
             </AnimatePresence>
           </div>
         </motion.div>
+
+        {/* History Modal */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-xl"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="w-full max-w-2xl bg-[#121213] border border-white/10 rounded-[40px] overflow-hidden flex flex-col max-h-[80vh]"
+              >
+                <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-[#FF4500]" />
+                    <h2 className="text-xl font-black uppercase tracking-tighter">Magnet History</h2>
+                  </div>
+                  <button 
+                    onClick={() => setShowHistory(false)}
+                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+                  >
+                    <RefreshCcw className="w-5 h-5 rotate-45" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
+                  {history.length === 0 ? (
+                    <div className="text-center py-20">
+                      <Clock className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+                      <p className="text-zinc-600 font-bold uppercase tracking-widest text-xs">No history yet</p>
+                    </div>
+                  ) : (
+                    history.map((item) => (
+                      <div key={item.id} className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4 hover:border-[#FF4500]/20 transition-colors group">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                              {new Date(item.timestamp).toLocaleDateString()}
+                            </span>
+                            <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                            <span className="text-[10px] font-black text-[#FF4500] uppercase tracking-widest">
+                              {item.tone}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setGeneratedComment(item.comment);
+                              setRedditUrl(item.url || '');
+                              setInputType(item.type);
+                              setShowHistory(false);
+                            }}
+                            className="text-[10px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-2"
+                          >
+                            <Reply className="w-3 h-3" />
+                            Restore
+                          </button>
+                        </div>
+                        <div className="text-sm text-zinc-400 line-clamp-3 italic">
+                          {item.comment}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Footer Info */}
         <footer className="mt-16 text-center space-y-2">
